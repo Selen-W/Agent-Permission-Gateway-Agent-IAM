@@ -9,7 +9,7 @@
 agent: coding-agent
 
 # 没有任何规则匹配时的默认姿态：
-#   ask   -> 请求人类批准（默认）
+#   ask   -> 请求操作者批准（默认）
 #   allow -> 直接放行
 #   deny  -> 一律拒绝（白名单模式）
 default_decision: ask
@@ -17,7 +17,7 @@ default_decision: ask
 # 风险熔断上限（0-100）：超过此分数的调用直接 DENY（除非有显式规则命中）
 deny_risk_above: 80
 
-# 受信任的人类操作者（风险模型会给它 -5 的信用分）
+# 受信任的操作者（风险模型会给予其 -5 的信用分）
 operator: alice
 
 # 生产环境策略（WHERE=production / WHEN）

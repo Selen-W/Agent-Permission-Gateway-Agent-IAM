@@ -4,24 +4,27 @@
 
 # Agent Permission Gateway / Agent IAM
 
-**解决底层的问题：*Agent 被允许做什么？***
+**The underlying question: *what is an agent permitted to do?***
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Selen-W/AbertJob/ci.yml?branch=main&label=CI)](.github/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#测试)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-339933)](#开发与测试)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#development)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-339933)](#development)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Stars](https://img.shields.io/github/stars/Selen-W/AbertJob?style=social)](https://github.com/Selen-W/AbertJob)
 
-*IAM + Firewall + Human-in-the-loop + Audit Log for AI Agents*
+*English | [简体中文](README_zh.md)*
+
+*IAM + policy firewall + approval workflow + audit log for AI agents*
 
 </div>
 
-一旦 Agent 能够调用 shell、文件系统、GitHub、数据库、云服务、浏览器、支付 API……权限控制
-就不再是"加个弹窗确认"能解决的，它变成了 **Agent 基础设施的一部分**。
+Once an agent can invoke shells, filesystems, GitHub, databases, cloud services, browsers, and
+payment APIs, permission control ceases to be a matter of confirmation dialogs. It becomes part of
+the agent infrastructure itself.
 
-本插件不是"弹窗确认插件"，而是一层 **Agent Permission Gateway**，横在 Agent 的每一个
-工具调用前面：
+This project is not a confirmation-dialog plugin. It is an **Agent Permission Gateway** that sits
+in front of every tool call an agent makes:
 
 ```text
                     User
@@ -47,26 +50,27 @@
          ALLOW / DENY / ASK
 ```
 
-第一原则：**Agent 不拥有权限**。Agent 请求权限，网关决定是否允许。
+The governing principle: **an agent does not own permissions.** An agent requests permission; the
+gateway decides whether to grant it.
 
-**特性一览**
+**Highlights**
 
-- 🚦 三种决策：**ALLOW / DENY / ASK**（ASK = 走宿主批准通道）
-- 🧠 五维风险引擎：**WHO / WHAT / WHERE / WHEN / WHY** → 0-100 可解释评分
-- 📜 声明式 YAML 策略：先定义能力边界，而不是每次点"允许"
-- ⏱️ 有界授权：**Approve once ≠ Always allow**（Action + Resource + Scope + Time）
-- 🧾 全量审计：会话日志事件 + 进程级审计环 + 会话投影
-- 🔌 零运行时依赖，标准 Cordis 插件，开箱即挂
+- 🚦 Three decisions: **ALLOW / DENY / ASK** (ASK routes through the host approval channel)
+- 🧠 Five-dimension risk engine: **WHO / WHAT / WHERE / WHEN / WHY** → 0–100 explainable score
+- 📜 Declarative YAML policy: define the capability boundary up front instead of approving each call
+- ⏱️ Scoped grants: **Approve once ≠ Always allow** (Action + Resource + Scope + Time)
+- 🧾 Full audit trail: session-log events + process-wide audit ring + session projection
+- 🔌 Zero runtime dependencies; a standard Cordis plugin, mountable as-is
 
-## 快速开始
+## Quick Start
 
 ```sh
 pnpm install
-pnpm exec tsx examples/demo.ts     # 端到端演示：看每条规则的判决与风险分解
-pnpm run check                     # typecheck + 103 个测试
+pnpm exec tsx examples/demo.ts     # end-to-end demo: decisions and risk breakdown per rule
+pnpm run check                     # typecheck + 103 tests
 ```
 
-挂载到 dsh（`cordis.patch.yml`）：
+Mount into dsh (`cordis.patch.yml`):
 
 ```yaml
 plugins:
@@ -81,34 +85,36 @@ plugins:
           deny:  ["sudo", "rm -rf /"]
 ```
 
-不配置任何策略也能用：默认 fail-closed（`ask` 姿态 + 风险 ≥ 80 直接拒绝）。
+The plugin is usable with no policy at all: it fails closed by default (`ask` posture, calls at or
+above risk 80 rejected outright).
 
-## 核心概念
+## Core Concepts
 
-### 1. 三种决策
+### 1. Three decisions
 
-| 决策 | 含义 | 示例 |
+| Decision | Meaning | Example |
 |---|---|---|
-| **ALLOW** | 直接放行 | `read_file("readme.md")` — 策略命中 allow |
-| **ASK** | 走批准流程 | `git push origin main` — 命中 approval 列表 / 生产策略 |
-| **DENY** | 直接拒绝（带原因） | `rm -rf /` — 策略 deny 列表 / 风险熔断 |
+| **ALLOW** | Execute immediately | `read_file("readme.md")` — matched an allow entry |
+| **ASK** | Route through the approval flow | `git push origin main` — matched an approval entry / production policy |
+| **DENY** | Reject, with a reason | `rm -rf /` — matched a deny entry / risk ceiling |
 
-### 2. 不能只判断命令
+### 2. Risk is more than the command
 
-`git = allowed / rm = denied` 是错的：`git push` 到 `feature/*` 和到生产分支风险完全不同。
-所以风险引擎同时考虑五个维度：
+`git = allowed / rm = denied` is the wrong model: pushing to `feature/*` and pushing to a
+production branch carry entirely different risk. The engine therefore evaluates five dimensions
+simultaneously:
 
-| 维度 | 信号 | 对风险的影响 |
+| Dimension | Signal | Effect on risk |
 |---|---|---|
-| **WHO** | 哪个 Agent / 操作者 / 会话 | 未识别主体 +5；操作者本人 −5 |
-| **WHAT** | read / write / execute / delete / network / deploy | 基础分 0 → 30 |
-| **WHERE** | workspace / repository / database / **production** | 敏感度 0 → 45 |
-| **WHEN** | 生产窗口内外 | 窗口外 +20 |
-| **WHY** | 任务关键词与动作的重合度 | 不匹配 +15（如"修测试"却删生产桶） |
+| **WHO** | Which agent / operator / session | Unrecognized principal +5; the operator −5 |
+| **WHAT** | read / write / execute / delete / network / deploy | Base score 0 → 30 |
+| **WHERE** | workspace / repository / database / **production** | Sensitivity 0 → 45 |
+| **WHEN** | Inside or outside the production window | +20 outside the window |
+| **WHY** | Overlap between the task keywords and the action | +15 on mismatch (e.g. deleting a production bucket while tasked to fix tests) |
 
-风险只是**证据**，不是判决 —— 判决由策略引擎给出。
+Risk is **evidence**, not a verdict — the decision belongs to the policy engine.
 
-### 3. 声明式策略
+### 3. Declarative policy
 
 ```yaml
 agent: coding-agent
@@ -125,24 +131,26 @@ permissions:
     deny:     ["sudo", "rm -rf /"]
   network:
     allow: ["github.com", "registry.npmjs.org"]
-    deny:  ["*"]          # "默认拒绝"：未列出的主机一律拒绝
+    deny:  ["*"]          # default-deny: hosts not listed are rejected
   production:
     require_approval: true
     protected_branches: ["main", "master", "prod/*"]
     window: ["09:00-18:00 Mon-Fri"]
 ```
 
-规则要点：
+Rule semantics:
 
-- 命令按 **token 前缀**匹配（`git push` 匹配 `git push origin main`，不匹配 `git pushy`）
-- 默认优先级 **deny > approval > allow**；`deny: ["*"]` 触发 allowlist 模式（allow 优先）
-- **能力特异性**：repository / database / deploy / network 先于通用 shell 求值，
-  `git push --force`（deny）能盖过 `git push`（approval）
-- 无规则命中且风险 ≥ `deny_risk_above`（默认 80）→ 熔断 DENY；显式规则可覆盖熔断
+- Commands match by **token prefix** (`git push` matches `git push origin main`, not `git pushy`)
+- Default precedence is **deny > approval > allow**; `deny: ["*"]` switches to allowlist mode
+  (allow entries take precedence, everything else falls to the deny tail)
+- **Capability specificity**: repository / database / deploy / network rules are evaluated before
+  the generic shell rules, so `git push --force` (deny) overrides `git push` (approval)
+- With no rule matched and risk ≥ `deny_risk_above` (default 80), the call is denied by the risk
+  ceiling; an explicit rule match overrides the ceiling
 
-### 4. 批准与有界授权
+### 4. Approval and scoped grants
 
-ASK 时宿主批准通道弹出：
+On ASK, the host approval channel presents the request:
 
 ```text
 ⚠️ Approval Required
@@ -155,92 +163,92 @@ Reason: Modifies protected branch
 [Approve once]  [Always allow]  [Reject]
 ```
 
-关键设计：**Approve once ≠ Always allow**。"Always allow" 是一个有边界的授权：
+The key design point: **Approve once ≠ Always allow**. "Always allow" is a bounded grant:
 
 ```text
-git push                                  （Action）
-+ repository = github.com/company/project-a（Resource）
-+ branch     = feature/*                  （Scope）
-+ duration   = 1 hour                     （Time）
+git push                                  (Action)
++ repository = github.com/company/project-a (Resource)
++ branch     = feature/*                  (Scope)
++ duration   = 1 hour                     (Time)
 ```
 
-授权必须同时满足 Action + Resource + Scope + Time 才生效，过期自动失效；
-命中授权的调用直接 ALLOW，不再打扰用户（`approval/request` 短路）。
+A grant takes effect only when Action + Resource + Scope + Time are all satisfied, and expires
+automatically. Calls covered by an active grant are allowed directly, without prompting the
+operator (`approval/request` short-circuit).
 
-### 5. 审计
+### 5. Audit
 
-每一次到达网关的调用都会写入：
+Every call that reaches the gateway is recorded in:
 
-- 会话日志事件 `permission/gateway-decision`（log-only，**永不出现在模型上下文**）
-- 进程级审计环（默认 500 条，`service.recentAudit()`）
-- 会话投影 `permissionGateway`（最近 50 条，浏览器面板/重放共用）
+- Session-log events `permission/gateway-decision` (log-only; **never appears in model context**)
+- A process-wide audit ring (500 entries by default; `service.recentAudit()`)
+- The `permissionGateway` session projection (latest 50 entries; shared by browser panels and
+  replay)
 
-## 文档导航
+## Documentation
 
-| 文档 | 内容 |
+| Document | Contents |
 |---|---|
-| [**使用手册**](docs/使用手册.md) | 完整参考：安装挂载、全部配置字段、策略语法、风险引擎、批准授权、审计、编程接口、常见场景、FAQ |
-| [**示例策略**](examples/policy.example.yaml) | 一份带注释的完整能力边界示例 |
-| [**端到端演示**](examples/demo.ts) | 可运行 demo：逐条展示判决、风险分解与授权短路 |
-| [**变更日志**](CHANGELOG.md) | 版本历史与计划 |
-| [**贡献指南**](CONTRIBUTING.md) | 行为准则、开发环境、PR 流程 |
-| [**安全策略**](SECURITY.md) | 漏洞报告与安全设计承诺 |
+| [**Usage Manual**](docs/使用手册.md) | Full reference (Chinese): mounting, every configuration field, policy syntax, risk engine, approval and grants, audit, programming interface, scenarios, FAQ |
+| [**Example Policy**](examples/policy.example.yaml) | An annotated, complete capability boundary |
+| [**End-to-end Demo**](examples/demo.ts) | Runnable demo: verdicts, risk breakdown, grant short-circuit |
+| [**Changelog**](CHANGELOG.md) | Release history and roadmap |
+| [**Contributing**](CONTRIBUTING.md) | Code of conduct, environment setup, PR workflow |
+| [**Security**](SECURITY.md) | Vulnerability reporting and security design commitments |
+| [**简体中文 README**](README_zh.md) | 中文版说明 |
 
-## 项目结构
+## Project Layout
 
 ```text
 src/
-  types.ts      # 公共词汇表（与 dsh permission-gateway/types 兼容）
-  glob.ts       # glob / 命令 token / 主机匹配
-  yaml.ts       # 策略专用 YAML 子集解析器（拒绝静默误解析）
-  context.ts    # 工具调用 → WHO/WHAT/WHERE/WHEN/WHY 信号
-  risk.ts       # 风险引擎（0-100 评分 + 档位 + 可解释贡献）
-  policy.ts     # 声明式策略 → 有序规则
-  grants.ts     # 有界授权（Action+Resource+Scope+Time）
-  audit.ts      # 有界审计环
-  engine.ts     # 决策引擎：风险 + 规则 + 授权 → 判决
-  host.ts       # 宿主结构契约（tools / approval / session / …）
-  service.ts    # 网关服务（judge / summary / audit / grants）
-  index.ts      # Cordis 插件入口（apply）
-examples/       # 示例策略 + demo
-docs/           # 使用手册
-tests/          # 103 个单测（含模拟宿主的端到端集成）
+  types.ts      # Public vocabulary (compatible with dsh permission-gateway/types)
+  glob.ts       # Glob / command-token / host matching
+  yaml.ts       # YAML-subset parser for policies (fails loud, never silent)
+  context.ts    # Tool call → WHO/WHAT/WHERE/WHEN/WHY signal extraction
+  risk.ts       # Risk engine (0–100 score, bands, explainable contributions)
+  policy.ts     # Declarative policy → ordered rules
+  grants.ts     # Scoped grants (Action + Resource + Scope + Time)
+  audit.ts      # Bounded audit ring
+  engine.ts     # Decision engine: risk + rules + grants → verdict
+  host.ts       # Structural host contract (tools / approval / session / …)
+  service.ts    # Gateway service (judge / summary / audit / grants)
+  index.ts      # Cordis plugin entry (apply)
+examples/       # Example policy + demo
+docs/           # Usage manual
+tests/          # 103 unit tests (incl. end-to-end against a mocked host)
 ```
 
-## 开发与测试
+## Development
 
 ```sh
 pnpm install
-pnpm run typecheck   # tsc --noEmit
-pnpm run test        # vitest
-pnpm run test:coverage  # 覆盖率报告
-pnpm run check       # typecheck + test 一起
-pnpm run demo        # 端到端演示
+pnpm run typecheck      # tsc --noEmit
+pnpm run test           # vitest
+pnpm run test:coverage  # coverage report
+pnpm run check          # typecheck + test
+pnpm run demo           # end-to-end demo
 ```
 
-`tests/plugin.spec.ts` 用模拟的 Cordis 上下文端到端验证：`tools/pre-execute` 拦截、
-批准通道授权短路、审计事件落日志、策略热更新。
+`tests/plugin.spec.ts` verifies the plugin end to end against a mocked Cordis context:
+`tools/pre-execute` interception, grant short-circuit in the approval channel, audit events in the
+session log, and live policy reload.
 
-## 设计取舍
+## Design Decisions
 
-- **风险引擎是启发式的**：只产生证据，判决权永远在策略与人类手里
-- **策略解析器宁可报错**：YAML 是安全边界，解析错一个 `*` 就可能开错一扇门，所以带行号抛错
-- **`deny: ["*"]` 语义特殊**："默认拒绝"（allow 优先）≠ "特定禁止"（盖过 allow）
-- **默认 fail-closed**：无批准通道时 ASK 退化为 DENY；无规则时受 `deny_risk_above` 熔断保护
+- **The risk engine is heuristic**: it produces evidence only; the verdict always rests with the
+  policy and the operator
+- **The parser fails loud**: YAML is a security boundary — a misread `*` can open the wrong door,
+  so unsupported constructs throw with a line number instead of being silently misparsed
+- **`deny: ["*"]` has dedicated semantics**: "default deny" (allow takes precedence) is distinct
+  from a specific prohibition (which overrides allow)
+- **Fail closed by default**: without an approval channel ASK degrades to DENY; without a matching
+  rule, the `deny_risk_above` ceiling protects the deployment
 
 ---
 
-*更深的内容——全部配置字段、风险评分表、批准授权 API、常见场景与 FAQ——见
-[**使用手册**](docs/使用手册.md)。*
+*For the full reference — every configuration field, the risk score tables, the approval and grant
+APIs, scenarios, and FAQ — see the [Usage Manual](docs/使用手册.md) (Chinese).*
 
 ## License
 
 [MIT](LICENSE) © [AbertJob](https://github.com/Selen-W)
-
----
-
-<div align="center">
-
-如果这个项目对你有帮助，欢迎 ⭐ Star —— 每个星标都是对 **Agent 安全基础设施** 的一份支持。
-
-</div>
