@@ -1,0 +1,74 @@
+{
+  "name": "@agent-iam/permission-gateway",
+  "description": "Agent Permission Gateway / Agent IAM — policy + risk engine + scoped approval + audit in front of every AI agent tool call (ALLOW / DENY / ASK)",
+  "version": "0.1.0",
+  "keywords": [
+    "agent",
+    "ai-agent",
+    "iam",
+    "permission",
+    "permission-gateway",
+    "approval",
+    "human-in-the-loop",
+    "policy",
+    "risk-engine",
+    "audit",
+    "security",
+    "llm",
+    "tools",
+    "guardrails",
+    "dsh"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "AbertJob"
+  },
+  "homepage": "https://github.com/OWNER/AbertJob#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/AbertJob.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/AbertJob/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "sideEffects": false,
+  "files": [
+    "src",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "default": "./src/types.ts"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "demo": "tsx examples/demo.ts",
+    "check": "pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.8",
+    "tsx": "^4.20.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

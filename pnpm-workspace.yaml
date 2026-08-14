@@ -1,0 +1,3 @@
+# pnpm 11 构建脚本白名单（esbuild 的 postinstall 仅校验平台二进制，可安全放行）
+allowBuilds:
+  esbuild: true

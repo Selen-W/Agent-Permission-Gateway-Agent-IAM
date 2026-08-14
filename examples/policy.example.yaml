@@ -1,0 +1,143 @@
+# Agent Permission Gateway — 示例策略
+#
+# 这是一个完整的 Agent 能力边界示例。把它作为插件配置的 `policy` 传入
+# （YAML 字符串或解析后的对象），或参考它编写你自己的策略。
+#
+# 核心思想：**不要每次点击"允许"** —— 先定义 Agent 的能力边界，让网关替你决策。
+
+# 该策略管辖的 Agent（WHO）
+agent: coding-agent
+
+# 没有任何规则匹配时的默认姿态：
+#   ask   -> 请求人类批准（默认）
+#   allow -> 直接放行
+#   deny  -> 一律拒绝（白名单模式）
+default_decision: ask
+
+# 风险熔断上限（0-100）：超过此分数的调用直接 DENY（除非有显式规则命中）
+deny_risk_above: 80
+
+# 受信任的人类操作者（风险模型会给它 -5 的信用分）
+operator: alice
+
+# 生产环境策略（WHERE=production / WHEN）
+production:
+  # 所有触及生产的调用都必须人工批准
+  require_approval: true
+  # 受保护分支：写这些分支需要批准
+  protected_branches:
+    - main
+    - master
+    - "prod/*"
+  # 生产操作窗口：窗口外触及生产的调用风险大幅上升
+  window:
+    - "09:00-18:00 Mon-Fri"
+
+permissions:
+  # ---- 文件系统（按操作分类的路径白名单）----
+  filesystem:
+    read:
+      - "./workspace/**"
+    write:
+      - "./workspace/**"
+    delete:
+      - "./workspace/tmp/**"
+    approval:
+      - "./secrets/**"
+    deny:
+      - "/etc/**"
+      - "/usr/**"
+
+  # ---- Shell（命令前缀匹配：git push 匹配 git push origin main）----
+  shell:
+    allow:
+      - git status
+      - git diff
+      - git log
+      - mvn test
+      - npm test
+      - pnpm test
+      - ls
+      - cat
+      - head
+      - tail
+    approval:
+      - git commit
+      - git push
+      - git reset --hard
+      - npm publish
+      - pnpm publish
+      - docker build
+    deny:
+      - sudo
+      - su
+      - rm -rf /
+      - chmod 777
+      - chown root
+      - "mkfs.*"
+      - "dd if=.*of=/dev/*"
+
+  # ---- 网络（主机白名单；deny "*" 表示默认拒绝一切未列出的主机）----
+  network:
+    allow:
+      - github.com
+      - registry.npmjs.org
+      - api.openai.com
+      - pypi.org
+    approval:
+      - "*.internal.example.com"
+    deny:
+      - "*"
+
+  # ---- 仓库（git 命令）----
+  repository:
+    allow:
+      - git fetch
+      - git pull
+      - git clone
+      - git branch
+      - git checkout
+      - git merge
+      - git rebase
+    approval:
+      - git push
+      - git tag
+      - git revert
+    deny:
+      - git push --force
+
+  # ---- 数据库（psql / mysql / sqlite3 等；命令按 token 前缀匹配，
+  #      引号内的内容是一个整体 token，所以用 SELECT* 匹配 "SELECT * FROM ..."）----
+  database:
+    allow:
+      - "psql -c SELECT*"
+      - "sqlite3 * .tables"
+      - "mysql -e SHOW*"
+    approval:
+      - "psql -c INSERT*"
+      - "psql -c UPDATE*"
+      - "mysql -e INSERT*"
+    deny:
+      - "psql -c DROP*"
+      - "psql -c TRUNCATE*"
+      - "mysql -e DROP*"
+      - "mysql -e TRUNCATE*"
+
+  # ---- 部署（kubectl / terraform / aws / heroku 等）----
+  deploy:
+    allow:
+      - "kubectl get"
+      - "kubectl describe"
+      - "kubectl logs"
+      - "terraform plan"
+      - "aws s3 ls"
+    approval:
+      - "kubectl apply"
+      - "kubectl rollout restart"
+      - "terraform apply"
+      - "heroku releases"
+    deny:
+      - "kubectl delete namespace"
+      - "terraform destroy"
+      - "aws iam delete-*"
+

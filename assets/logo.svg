@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#bg)"/>
+  <!-- gateway: shield outline -->
+  <path d="M128 56 L184 80 V132 C184 172 160 196 128 208 C96 196 72 172 72 132 V80 Z"
+        fill="none" stroke="#ffffff" stroke-width="10" stroke-linejoin="round"/>
+  <!-- decision arrows -->
+  <path d="M96 108 L128 108 M128 108 L118 100 M128 108 L118 116" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M160 148 L128 148 M128 148 L138 140 M128 148 L138 156" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- check -->
+  <path d="M100 130 L118 148 L156 108" stroke="#a7f3d0" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
