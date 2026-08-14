@@ -24,13 +24,13 @@
   "author": {
     "name": "AbertJob"
   },
-  "homepage": "https://github.com/Selen-W/AbertJob#readme",
+  "homepage": "https://github.com/Selen-W/Agent-Permission-Gateway-Agent-IAM#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Selen-W/AbertJob.git"
+    "url": "git+https://github.com/Selen-W/Agent-Permission-Gateway-Agent-IAM.git"
   },
   "bugs": {
-    "url": "https://github.com/Selen-W/AbertJob/issues"
+    "url": "https://github.com/Selen-W/Agent-Permission-Gateway-Agent-IAM/issues"
   },
   "engines": {
     "node": ">=18"
