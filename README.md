@@ -7,11 +7,11 @@
 **解决底层的问题：*Agent 被允许做什么？***
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/OWNER/AbertJob/ci.yml?branch=main&label=CI)](.github/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Selen-W/AbertJob/ci.yml?branch=main&label=CI)](.github/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#测试)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-339933)](#开发与测试)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Stars](https://img.shields.io/github/stars/OWNER/AbertJob?style=social)](https://github.com/OWNER/AbertJob)
+[![Stars](https://img.shields.io/github/stars/Selen-W/AbertJob?style=social)](https://github.com/Selen-W/AbertJob)
 
 *IAM + Firewall + Human-in-the-loop + Audit Log for AI Agents*
 
@@ -235,7 +235,7 @@ pnpm run demo        # 端到端演示
 
 ## License
 
-[MIT](LICENSE) © [AbertJob](https://github.com/OWNER)
+[MIT](LICENSE) © [AbertJob](https://github.com/Selen-W)
 
 ---
 
